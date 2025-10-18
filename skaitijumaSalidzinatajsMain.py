@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -27,7 +28,14 @@ except ImportError:
     Workbook = None  # type: ignore[assignment]
     get_column_letter = None  # type: ignore[assignment]
 
-BASE_DIR = Path(__file__).resolve().parent
+
+def app_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    return Path(__file__).resolve().parent
+
+
+BASE_DIR = app_base_dir()
 DEFAULT_SOURCE_DIR = BASE_DIR / "source"
 DEFAULT_COUNTS_DIR = BASE_DIR / "counts"
 DEFAULT_REPORTS_DIR = BASE_DIR / "reports"
