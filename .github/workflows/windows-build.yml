@@ -26,6 +26,8 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller `
+            --clean `
+            --noupx `
             --noconfirm `
             --onefile `
             --noconsole `
