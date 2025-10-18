@@ -75,13 +75,27 @@ _pdf_font_active_name = "Helvetica"
 
 
 def locate_font_file() -> Optional[Path]:
-    preferred = [
-        Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
-        Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
-        Path("/System/Library/Fonts/Supplemental/Times New Roman.ttf"),
-        Path("/Library/Fonts/Arial Unicode.ttf"),
-        Path("/Library/Fonts/Arial.ttf"),
-    ]
+    preferred: List[Path] = []
+    if sys.platform.startswith("win"):
+        windir = Path(os.environ.get("WINDIR", "C:\\Windows")) / "Fonts"
+        preferred.extend(
+            [
+                windir / "arialuni.ttf",
+                windir / "segoeui.ttf",
+                windir / "arial.ttf",
+                windir / "calibri.ttf",
+            ]
+        )
+    preferred.extend(
+        [
+            Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+            Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+            Path("/System/Library/Fonts/Supplemental/Times New Roman.ttf"),
+            Path("/Library/Fonts/Arial Unicode.ttf"),
+            Path("/Library/Fonts/Arial.ttf"),
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        ]
+    )
     for candidate in preferred:
         if candidate.exists():
             return candidate
