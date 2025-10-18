@@ -235,6 +235,28 @@ def load_table(path: Path) -> DataFrame:
     return df[["code", "name", "amount"]]
 
 
+def aggregate_sources(paths: Sequence[Path], catalog: Dict[str, str]) -> DataFrame:
+    frames = []
+    for path in paths:
+        df = load_table(path)
+        if df.empty:
+            continue
+        df["name"] = df["name"].replace("", None)
+        frames.append(df)
+    if not frames:
+        return pd.DataFrame(columns=["code", "name", "amount"])
+    combined = pd.concat(frames, ignore_index=True)
+    combined["name"] = combined["name"].fillna("")
+    grouped = combined.groupby("code", as_index=False).agg(
+        amount=("amount", "sum"),
+        name=("name", lambda values: next((v for v in values if v), "")),
+    )
+    grouped["name"] = grouped.apply(
+        lambda row: row["name"] or catalog.get(row["code"], ""), axis=1
+    )
+    return grouped[["code", "name", "amount"]]
+
+
 def aggregate_counts(paths: Sequence[Path], catalog: Dict[str, str]) -> DataFrame:
     frames = []
     for path in paths:
@@ -539,7 +561,7 @@ class InventoryApp(tk.Tk):
         source_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
         source_inner = ttk.Frame(source_frame)
         source_inner.pack(fill="both", expand=True, padx=6, pady=6)
-        self.source_listbox = tk.Listbox(source_inner, height=8, exportselection=False)
+        self.source_listbox = tk.Listbox(source_inner, height=8, selectmode=tk.MULTIPLE, exportselection=False)
         self.source_listbox.pack(side="left", fill="both", expand=True)
         source_scroll = ttk.Scrollbar(source_inner, orient="vertical", command=self.source_listbox.yview)
         source_scroll.pack(side="right", fill="y")
@@ -678,19 +700,18 @@ class InventoryApp(tk.Tk):
     def perform_comparison(self) -> None:
         source_selection = self.source_listbox.curselection()
         if not source_selection:
-            messagebox.showerror("Salīdzinājums", "Izvēlies vienu avota failu.")
+            messagebox.showerror("Salīdzinājums", "Izvēlies vismaz vienu avota failu.")
             return
-        source_path = self.source_files[source_selection[0]]
+        source_paths = [self.source_files[i] for i in source_selection]
         count_indices = self.count_listbox.curselection()
         if not count_indices:
             messagebox.showerror("Salīdzinājums", "Izvēlies vismaz vienu skaitījuma failu.")
             return
         count_paths = [self.count_files[i] for i in count_indices]
         try:
-            source_df = load_table(source_path)
-            source_df["name"] = source_df.apply(
-                lambda row: row["name"] or self.catalog.get(row["code"], ""), axis=1
-            )
+            source_df = aggregate_sources(source_paths, self.catalog)
+            if source_df.empty:
+                raise ValueError("Avota failos nav derīgu ierakstu.")
             counts_df = aggregate_counts(count_paths, self.catalog)
             self.comparison_df = build_comparison(source_df, counts_df, self.catalog)
         except Exception as exc:
