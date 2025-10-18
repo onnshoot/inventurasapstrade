@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -41,7 +42,23 @@ DEFAULT_COUNTS_DIR = BASE_DIR / "counts"
 DEFAULT_REPORTS_DIR = BASE_DIR / "reports"
 CATALOG_XLSX = BASE_DIR / "allproducts.xlsx"
 CATALOG_JS = BASE_DIR / "inventura" / "sources" / "products.js"
-CONFIG_FILE = BASE_DIR / "inventory_paths.json"
+APP_CONFIG_NAME = "EziInventory"
+
+
+def get_config_dir() -> Path:
+    system = sys.platform
+    if system.startswith("win"):
+        base = os.environ.get("APPDATA")
+        if base:
+            return Path(base) / APP_CONFIG_NAME
+        return Path.home() / "AppData" / "Roaming" / APP_CONFIG_NAME
+    if system == "darwin":
+        return Path.home() / "Library" / "Application Support" / APP_CONFIG_NAME
+    base = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+    return Path(base) / APP_CONFIG_NAME
+
+
+CONFIG_FILE = get_config_dir() / "inventory_paths.json"
 
 HEADER_ALIASES: Dict[str, Sequence[str]] = {
     "code": ("code", "kods", "sku", "artikuls", "preces kods", "produkts", "id"),
@@ -110,7 +127,11 @@ def load_path_config() -> Dict[str, Path]:
             for key in defaults:
                 value = data.get(key)
                 if isinstance(value, str) and value.strip():
-                    defaults[key] = Path(value).expanduser().resolve()
+                    path = Path(value).expanduser()
+                    try:
+                        defaults[key] = path.resolve()
+                    except Exception:
+                        defaults[key] = path
         except Exception:
             pass
     return defaults
@@ -119,6 +140,7 @@ def load_path_config() -> Dict[str, Path]:
 def save_path_config(paths: Dict[str, Path]) -> None:
     payload = {key: str(path) for key, path in paths.items()}
     try:
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         CONFIG_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     except Exception:
         pass
