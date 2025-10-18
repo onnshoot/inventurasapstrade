@@ -25,16 +25,16 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller ^
-            --noconfirm ^
-            --onefile ^
-            --noconsole ^
-            --name SkaitijumaSalidzinatajs ^
-            --add-data "allproducts.xlsx;." ^
-            --add-data "inventura;inventura" ^
-            --add-data "source;source" ^
-            --add-data "counts;counts" ^
-            --add-data "reports;reports" ^
+          pyinstaller `
+            --noconfirm `
+            --onefile `
+            --noconsole `
+            --name SkaitijumaSalidzinatajs `
+            --add-data "allproducts.xlsx;." `
+            --add-data "inventura;inventura" `
+            --add-data "source;source" `
+            --add-data "counts;counts" `
+            --add-data "reports;reports" `
             skaitijumaSalidzinatajsMain.py
 
       - name: Upload artifact
